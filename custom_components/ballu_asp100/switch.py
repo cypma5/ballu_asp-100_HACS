@@ -6,6 +6,7 @@ from typing import Any
 
 from homeassistant.components.switch import SwitchEntity
 from homeassistant.config_entries import ConfigEntry
+from homeassistant.components import mqtt
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
@@ -44,6 +45,7 @@ async def async_setup_entry(
     for switch_key, switch_config in SWITCH_TYPES.items():
         switches.append(
             BalluASP100Switch(
+                hass,
                 data["device_id"],
                 data["device_type"],
                 data["name"],
@@ -60,6 +62,7 @@ class BalluASP100Switch(SwitchEntity):
 
     def __init__(
         self,
+        hass: HomeAssistant,
         device_id: str,
         device_type: str,
         device_name: str,
@@ -68,6 +71,7 @@ class BalluASP100Switch(SwitchEntity):
         entry_id: str,
     ) -> None:
         """Initialize the switch."""
+        self.hass = hass
         self._device_id = device_id
         self._device_type = device_type
         self._device_name = device_name
@@ -81,6 +85,8 @@ class BalluASP100Switch(SwitchEntity):
         self._attr_entity_registry_enabled_default = switch_config.get("enabled_default", True)
         
         self._is_on = False
+        self._command_topic_base = f"rusclimate/{device_type}/{device_id}/control"
+        self._state_topic_base = f"rusclimate/{device_type}/{device_id}/state"
 
     @property
     def device_info(self):
@@ -99,9 +105,9 @@ class BalluASP100Switch(SwitchEntity):
 
     async def async_turn_on(self, **kwargs: Any) -> None:
         """Turn the switch on."""
-        topic = f"rusclimate/{self._device_type}/{self._device_id}/control/{self._switch_config['key']}"
+        topic = f"{self._command_topic_base}/{self._switch_config['key']}"
         
-        await self.hass.components.mqtt.async_publish(
+        await mqtt.async_publish(
             self.hass,
             topic,
             self._switch_config["payload_on"],
@@ -113,9 +119,9 @@ class BalluASP100Switch(SwitchEntity):
 
     async def async_turn_off(self, **kwargs: Any) -> None:
         """Turn the switch off."""
-        topic = f"rusclimate/{self._device_type}/{self._device_id}/control/{self._switch_config['key']}"
+        topic = f"{self._command_topic_base}/{self._switch_config['key']}"
         
-        await self.hass.components.mqtt.async_publish(
+        await mqtt.async_publish(
             self.hass,
             topic,
             self._switch_config["payload_off"],
@@ -127,9 +133,10 @@ class BalluASP100Switch(SwitchEntity):
 
     async def async_added_to_hass(self) -> None:
         """Subscribe to MQTT topics when entity is added to hass."""
-        topic = f"rusclimate/{self._device_type}/{self._device_id}/state/{self._switch_config['key']}"
+        topic = f"{self._state_topic_base}/{self._switch_config['key']}"
         
-        await self.hass.components.mqtt.async_subscribe(
+        await mqtt.async_subscribe(
+            self.hass,
             topic,
             self._message_received,
         )

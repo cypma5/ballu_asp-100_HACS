@@ -6,6 +6,7 @@ from typing import Any
 
 from homeassistant.components.sensor import SensorEntity
 from homeassistant.config_entries import ConfigEntry
+from homeassistant.components import mqtt
 from homeassistant.const import UnitOfTemperature, SIGNAL_STRENGTH_DECIBELS_MILLIWATT
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
@@ -92,6 +93,7 @@ async def async_setup_entry(
     for sensor_key, sensor_config in SENSOR_TYPES.items():
         sensors.append(
             BalluASP100Sensor(
+                hass,
                 data["device_id"],
                 data["device_type"],
                 data["name"],
@@ -108,6 +110,7 @@ class BalluASP100Sensor(SensorEntity):
 
     def __init__(
         self,
+        hass: HomeAssistant,
         device_id: str,
         device_type: str,
         device_name: str,
@@ -116,6 +119,7 @@ class BalluASP100Sensor(SensorEntity):
         entry_id: str,
     ) -> None:
         """Initialize the sensor."""
+        self.hass = hass
         self._device_id = device_id
         self._device_type = device_type
         self._device_name = device_name
@@ -130,6 +134,7 @@ class BalluASP100Sensor(SensorEntity):
         self._attr_entity_registry_enabled_default = sensor_config["enabled_default"]
         
         self._state = None
+        self._state_topic_base = f"rusclimate/{device_type}/{device_id}/state"
 
     @property
     def device_info(self):
@@ -148,9 +153,10 @@ class BalluASP100Sensor(SensorEntity):
 
     async def async_added_to_hass(self) -> None:
         """Subscribe to MQTT topics when entity is added to hass."""
-        topic = f"rusclimate/{self._device_type}/{self._device_id}/state/{self._sensor_config['key']}"
+        topic = f"{self._state_topic_base}/{self._sensor_config['key']}"
         
-        await self.hass.components.mqtt.async_subscribe(
+        await mqtt.async_subscribe(
+            self.hass,
             topic,
             self._message_received,
         )

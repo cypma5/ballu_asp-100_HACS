@@ -10,6 +10,7 @@ from homeassistant.components.climate import (
     HVACMode,
 )
 from homeassistant.components.climate.const import HVACMode
+from homeassistant.components import mqtt
 from homeassistant.const import ATTR_TEMPERATURE, UnitOfTemperature
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
@@ -20,7 +21,7 @@ _LOGGER = logging.getLogger(__name__)
 
 async def async_setup_entry(
     hass: HomeAssistant,
-    config_entry: config_entries.ConfigEntry,
+    config_entry,
     async_add_entities: AddEntitiesCallback,
 ) -> None:
     """Set up Ballu ASP-100 climate entity from config entry."""
@@ -79,6 +80,10 @@ class BalluASP100Climate(ClimateEntity):
         self._preset_mode = "comfort"
         self._available = True
 
+        # MQTT topics
+        self._command_topic_base = f"rusclimate/{device_type}/{device_id}/control"
+        self._state_topic_base = f"rusclimate/{device_type}/{device_id}/state"
+
     @property
     def device_info(self):
         """Return device info."""
@@ -124,9 +129,9 @@ class BalluASP100Climate(ClimateEntity):
         _LOGGER.debug("Setting temperature: %s", kwargs)
         
         if (temperature := kwargs.get(ATTR_TEMPERATURE)) is not None:
-            topic = f"rusclimate/{self._device_type}/{self._device_id}/control/temperature"
+            topic = f"{self._command_topic_base}/temperature"
             
-            await self.hass.components.mqtt.async_publish(
+            await mqtt.async_publish(
                 self.hass,
                 topic,
                 str(int(temperature)),
@@ -141,10 +146,10 @@ class BalluASP100Climate(ClimateEntity):
         """Set new fan mode."""
         _LOGGER.debug("Setting fan mode: %s", fan_mode)
         
-        topic = f"rusclimate/{self._device_type}/{self._device_id}/control/speed"
+        topic = f"{self._command_topic_base}/speed"
         fan_value = FAN_MODE_MAPPING.get(fan_mode, 0)
         
-        await self.hass.components.mqtt.async_publish(
+        await mqtt.async_publish(
             self.hass,
             topic,
             str(fan_value),
@@ -159,7 +164,7 @@ class BalluASP100Climate(ClimateEntity):
         """Set new operation mode."""
         _LOGGER.debug("Setting HVAC mode: %s", hvac_mode)
         
-        topic = f"rusclimate/{self._device_type}/{self._device_id}/control/mode"
+        topic = f"{self._command_topic_base}/mode"
         
         if hvac_mode == HVACMode.OFF:
             mode_value = 0
@@ -167,7 +172,7 @@ class BalluASP100Climate(ClimateEntity):
             # При включении используем текущий preset mode
             mode_value = MODE_MAPPING.get(self._preset_mode, 1)
         
-        await self.hass.components.mqtt.async_publish(
+        await mqtt.async_publish(
             self.hass,
             topic,
             str(mode_value),
@@ -182,10 +187,10 @@ class BalluASP100Climate(ClimateEntity):
         """Set new preset mode."""
         _LOGGER.debug("Setting preset mode: %s", preset_mode)
         
-        topic = f"rusclimate/{self._device_type}/{self._device_id}/control/mode"
+        topic = f"{self._command_topic_base}/mode"
         mode_value = MODE_MAPPING.get(preset_mode, 1)
         
-        await self.hass.components.mqtt.async_publish(
+        await mqtt.async_publish(
             self.hass,
             topic,
             str(mode_value),
@@ -214,26 +219,30 @@ class BalluASP100Climate(ClimateEntity):
         _LOGGER.debug("Setting up MQTT subscriptions for device %s", self._device_id)
         
         # Temperature state
-        await self.hass.components.mqtt.async_subscribe(
-            f"rusclimate/{self._device_type}/{self._device_id}/state/temperature",
+        await mqtt.async_subscribe(
+            self.hass,
+            f"{self._state_topic_base}/temperature",
             self._temperature_message_received,
         )
         
         # Current temperature from sensor
-        await self.hass.components.mqtt.async_subscribe(
-            f"rusclimate/{self._device_type}/{self._device_id}/state/sensor/temperature", 
+        await mqtt.async_subscribe(
+            self.hass,
+            f"{self._state_topic_base}/sensor/temperature", 
             self._current_temperature_message_received,
         )
         
         # Fan mode state
-        await self.hass.components.mqtt.async_subscribe(
-            f"rusclimate/{self._device_type}/{self._device_id}/state/speed",
+        await mqtt.async_subscribe(
+            self.hass,
+            f"{self._state_topic_base}/speed",
             self._fan_mode_message_received,
         )
         
         # Mode state (используется и для HVAC mode и для preset mode)
-        await self.hass.components.mqtt.async_subscribe(
-            f"rusclimate/{self._device_type}/{self._device_id}/state/mode",
+        await mqtt.async_subscribe(
+            self.hass,
+            f"{self._state_topic_base}/mode",
             self._mode_message_received,
         )
 

@@ -6,6 +6,7 @@ from typing import Any
 
 from homeassistant.components.select import SelectEntity
 from homeassistant.config_entries import ConfigEntry
+from homeassistant.components import mqtt
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
@@ -22,6 +23,7 @@ async def async_setup_entry(
     data = config_entry.data
     
     select_entity = BalluASP100Select(
+        hass,
         data["device_id"],
         data["device_type"],
         data["name"],
@@ -35,12 +37,14 @@ class BalluASP100Select(SelectEntity):
 
     def __init__(
         self,
+        hass: HomeAssistant,
         device_id: str,
         device_type: str,
         device_name: str,
         entry_id: str,
     ) -> None:
         """Initialize the select."""
+        self.hass = hass
         self._device_id = device_id
         self._device_type = device_type
         self._device_name = device_name
@@ -53,6 +57,8 @@ class BalluASP100Select(SelectEntity):
         self._attr_entity_registry_enabled_default = False
         
         self._current_option = "Выключено"
+        self._command_topic_base = f"rusclimate/{device_type}/{device_id}/control"
+        self._state_topic_base = f"rusclimate/{device_type}/{device_id}/state"
 
     @property
     def device_info(self):
@@ -71,10 +77,10 @@ class BalluASP100Select(SelectEntity):
 
     async def async_select_option(self, option: str) -> None:
         """Change the selected option."""
-        topic = f"rusclimate/{self._device_type}/{self._device_id}/control/amount"
+        topic = f"{self._command_topic_base}/amount"
         sound_value = SOUND_MAPPING.get(option, 0)
         
-        await self.hass.components.mqtt.async_publish(
+        await mqtt.async_publish(
             self.hass,
             topic,
             str(sound_value),
@@ -86,9 +92,10 @@ class BalluASP100Select(SelectEntity):
 
     async def async_added_to_hass(self) -> None:
         """Subscribe to MQTT topics when entity is added to hass."""
-        topic = f"rusclimate/{self._device_type}/{self._device_id}/state/amount"
+        topic = f"{self._state_topic_base}/amount"
         
-        await self.hass.components.mqtt.async_subscribe(
+        await mqtt.async_subscribe(
+            self.hass,
             topic,
             self._message_received,
         )
