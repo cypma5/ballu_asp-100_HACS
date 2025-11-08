@@ -8,12 +8,12 @@ from typing import Any
 import voluptuous as vol
 
 from homeassistant import config_entries
-from homeassistant.core import HomeAssistant, callback
+from homeassistant.core import HomeAssistant
 from homeassistant.data_entry_flow import FlowResult
 
-_LOGGER = logging.getLogger(__name__)
+from .const import DOMAIN
 
-DOMAIN = "ballu_asp100"
+_LOGGER = logging.getLogger(__name__)
 
 def validate_device_id(device_id: str) -> bool:
     """Validate device ID format (32 hex characters)."""
@@ -24,12 +24,6 @@ class BalluASP100ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     """Handle a config flow for Ballu ASP-100."""
 
     VERSION = 1
-
-    def __init__(self) -> None:
-        """Initialize the config flow."""
-        self._device_id: str | None = None
-        self._device_type: str | None = None
-        self._name: str | None = None
 
     async def async_step_user(
         self, user_input: dict[str, Any] | None = None

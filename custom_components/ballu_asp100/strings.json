@@ -3,29 +3,19 @@
     "step": {
       "user": {
         "title": "Настройка Ballu ASP-100",
-        "description": "Введите данные устройства или используйте автоматическое обнаружение",
+        "description": "Введите данные устройства",
         "data": {
           "device_id": "Device ID",
-          "device_type": "Тип устройства", 
+          "device_type": "Тип устройства",
           "name": "Название"
-        }
-      },
-      "discovery": {
-        "title": "Обнаружены устройства Ballu",
-        "description": "Выберите устройство для добавления. Обнаружено устройств: {count}",
-        "data": {
-          "discovered_device": "Устройство"
         }
       }
     },
     "error": {
-      "cannot_connect": "Не удалось подключиться",
-      "invalid_device_id": "Неверный формат Device ID (должен быть 32 hex символа)",
-      "unknown": "Неизвестная ошибка"
+      "invalid_device_id": "Неверный формат Device ID (должен быть 32 hex символа)"
     },
     "abort": {
-      "already_configured": "Устройство уже настроено",
-      "no_devices_found": "Устройства Ballu не обнаружены. Проверьте подключение MQTT и DNS настройки."
+      "already_configured": "Устройство уже настроено"
     }
   }
 }

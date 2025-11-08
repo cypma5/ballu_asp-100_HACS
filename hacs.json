@@ -1,4 +1,7 @@
 {
   "name": "Ballu ASP-100",
-  "render_readme": true
+  "render_readme": true,
+  "domains": ["climate", "sensor", "switch", "select"],
+  "iot_class": "cloud_push",
+  "homeassistant": "2023.8.0"
 }
