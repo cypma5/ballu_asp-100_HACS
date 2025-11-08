@@ -14,7 +14,7 @@ from homeassistant.const import ATTR_TEMPERATURE, UnitOfTemperature
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
-from .const import DOMAIN, FAN_MODE_MAPPING, MODE_MAPPING
+from .const import DOMAIN, FAN_MODE_MAPPING, MODE_MAPPING, PRESET_MODES
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -46,7 +46,7 @@ class BalluASP100Climate(ClimateEntity):
     _attr_max_temp = 25
     _attr_hvac_modes = [HVACMode.OFF, HVACMode.FAN_ONLY]
     _attr_fan_modes = list(FAN_MODE_MAPPING.keys())
-    _attr_preset_modes = list(MODE_MAPPING.keys())[1:]  # all except 'off'
+    _attr_preset_modes = PRESET_MODES
     _attr_supported_features = (
         ClimateEntityFeature.TARGET_TEMPERATURE
         | ClimateEntityFeature.FAN_MODE
@@ -163,8 +163,8 @@ class BalluASP100Climate(ClimateEntity):
         
         if hvac_mode == HVACMode.OFF:
             mode_value = 0
-            self._preset_mode = "comfort"
         else:
+            # При включении используем текущий preset mode
             mode_value = MODE_MAPPING.get(self._preset_mode, 1)
         
         await self.hass.components.mqtt.async_publish(
@@ -195,10 +195,19 @@ class BalluASP100Climate(ClimateEntity):
         
         self._preset_mode = preset_mode
         
+        # Если устройство включено, обновляем HVAC mode
         if self._hvac_mode != HVACMode.OFF:
             self._hvac_mode = HVACMode.FAN_ONLY
             
         self.async_write_ha_state()
+
+    async def async_turn_on(self) -> None:
+        """Turn the device on."""
+        await self.async_set_hvac_mode(HVACMode.FAN_ONLY)
+
+    async def async_turn_off(self) -> None:
+        """Turn the device off."""
+        await self.async_set_hvac_mode(HVACMode.OFF)
 
     async def async_added_to_hass(self) -> None:
         """Subscribe to MQTT topics when entity is added to hass."""
@@ -222,7 +231,7 @@ class BalluASP100Climate(ClimateEntity):
             self._fan_mode_message_received,
         )
         
-        # Mode state
+        # Mode state (используется и для HVAC mode и для preset mode)
         await self.hass.components.mqtt.async_subscribe(
             f"rusclimate/{self._device_type}/{self._device_id}/state/mode",
             self._mode_message_received,
@@ -252,6 +261,7 @@ class BalluASP100Climate(ClimateEntity):
             fan_value = int(message.payload)
             _LOGGER.debug("Received fan mode value: %s", fan_value)
             
+            # Reverse mapping from value to mode name
             for mode, value in FAN_MODE_MAPPING.items():
                 if value == fan_value:
                     self._fan_mode = mode
@@ -272,6 +282,7 @@ class BalluASP100Climate(ClimateEntity):
                 self._preset_mode = "comfort"
             else:
                 self._hvac_mode = HVACMode.FAN_ONLY
+                # Reverse mapping from value to preset name
                 for preset, value in MODE_MAPPING.items():
                     if value == mode_value:
                         self._preset_mode = preset

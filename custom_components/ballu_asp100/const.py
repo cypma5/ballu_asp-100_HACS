@@ -4,14 +4,14 @@ DOMAIN = "ballu_asp100"
 MANUFACTURER = "Ballu"
 MODEL = "ONEAIR ASP-100"
 
-# Modes mapping
+# Modes mapping - обновлено согласно конфигу
 MODE_MAPPING = {
     "off": 0,
-    "comfort": 1,
-    "Auto": 2,
-    "sleep": 3,
-    "boost": 4,
-    "eco": 5
+    "comfort": 1,      # Ручной режим
+    "Auto": 2,         # Автоматический по СО2
+    "sleep": 3,        # Ночной режим
+    "boost": 4,        # Турбо режим
+    "eco": 5           # Эко проветривание
 }
 
 FAN_MODE_MAPPING = {
@@ -33,3 +33,7 @@ SOUND_MAPPING = {
     "Птицы": 4,
     "Костер": 5
 }
+
+# HVAC modes based on device capabilities
+HVAC_MODES = ["off", "fan_only"]
+PRESET_MODES = ["comfort", "Auto", "sleep", "boost", "eco"]

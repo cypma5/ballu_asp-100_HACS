@@ -24,7 +24,7 @@ SENSOR_TYPES = {
     },
     "filter_life": {
         "name": "Filter Remaining Life",
-        "key": "expendables",
+        "key": "expendables", 
         "unit": "%",
         "icon": "mdi:air-filter",
         "enabled_default": True,
@@ -51,7 +51,7 @@ SENSOR_TYPES = {
         "enabled_default": False,
     },
     "mqtt_latency": {
-        "name": "MQTT Latency",
+        "name": "MQTT Latency", 
         "key": "diag/mqtt_latency",
         "unit": "ms",
         "icon": "mdi:speedometer",
@@ -69,6 +69,13 @@ SENSOR_TYPES = {
         "key": "diag/gw_loss",
         "unit": "%",
         "icon": "mdi:connection",
+        "enabled_default": False,
+    },
+    "turbo_timer": {
+        "name": "Turbo Mode Timer",
+        "key": "time",
+        "unit": None,  # Форматированное время MM:SS
+        "icon": "mdi:timer",
         "enabled_default": False,
     }
 }
@@ -151,11 +158,21 @@ class BalluASP100Sensor(SensorEntity):
     def _message_received(self, message):
         """Handle new MQTT messages."""
         try:
+            value = message.payload
+            
+            # Special handling for different sensor types
             if self._sensor_key == "filter_life":
-                value = message.payload.strip("[]")
-            else:
-                value = message.payload
+                # Фильтр приходит как [85] - убираем скобки
+                value = value.strip("[]")
+            elif self._sensor_key == "turbo_timer":
+                # Таймер форматируется как MM:SS
+                from datetime import datetime
+                seconds = int(value)
+                minutes = seconds // 60
+                remaining_seconds = seconds % 60
+                value = f"{minutes:02d}:{remaining_seconds:02d}"
                 
+            # Convert to appropriate type
             if self._sensor_config["unit"] in ["ppm", "ms", "%", "x"]:
                 self._state = int(float(value))
             elif self._sensor_config["unit"] == UnitOfTemperature.CELSIUS:

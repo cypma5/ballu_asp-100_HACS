@@ -20,13 +20,15 @@ SWITCH_TYPES = {
         "icon": "mdi:volume-high",
         "payload_on": "1",
         "payload_off": "0",
+        "enabled_default": True,
     },
     "backlight": {
-        "name": "Auto-off Indication",
+        "name": "Auto-off Indication", 
         "key": "backlight",
         "icon": "mdi:brightness-6",
         "payload_on": "1",
         "payload_off": "0",
+        "enabled_default": True,
     }
 }
 
@@ -76,6 +78,7 @@ class BalluASP100Switch(SwitchEntity):
         self._attr_name = f"{switch_config['name']}"
         self._attr_unique_id = f"ballu_asp100_{device_id}_{switch_key}"
         self._attr_icon = switch_config["icon"]
+        self._attr_entity_registry_enabled_default = switch_config.get("enabled_default", True)
         
         self._is_on = False
 
